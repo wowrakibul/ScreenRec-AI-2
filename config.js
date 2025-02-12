@@ -1,5 +1,5 @@
 const CONFIG = {
     GITHUB_TOKEN: 'your_github_token_here',
-    GITHUB_REPO: 'your_username/your_repo_name',
+    GITHUB_REPO: 'wowrakibul/ScreenRec-AI-2',
     GITHUB_BRANCH: 'main'
 };
