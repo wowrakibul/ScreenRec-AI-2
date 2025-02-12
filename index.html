@@ -3,52 +3,145 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GitHub Screen Recorder</title>
+    <title>ScreenRec AI - Supabase Screen Recorder</title>
     <style>
+        :root {
+            --primary-color: #3ECF8E;
+            --secondary-color: #30363d;
+            --background-color: #1C1C1C;
+            --text-color: #F8F9FA;
+        }
+
         body {
-            font-family: Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
         }
+
+        .container {
+            background-color: #242424;
+            border-radius: 6px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+
         .controls {
             margin: 20px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
+
         button {
             padding: 10px 20px;
-            margin: 5px;
+            border-radius: 6px;
+            border: none;
+            background-color: var(--primary-color);
+            color: #1C1C1C;
             cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
         }
+
+        button:disabled {
+            background-color: var(--secondary-color);
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(62, 207, 142, 0.2);
+        }
+
         #preview {
             width: 100%;
             max-width: 800px;
             margin-top: 20px;
-            border: 1px solid #ccc;
+            border-radius: 6px;
+            background-color: #1C1C1C;
+            border: 1px solid rgba(62, 207, 142, 0.2);
         }
+
         .status {
             margin: 10px 0;
             padding: 10px;
-            border-radius: 4px;
+            border-radius: 6px;
+            background-color: #2D2D2D;
         }
+
         .recording {
-            background-color: #ffe6e6;
+            background-color: #DC3545;
+            color: white;
         }
+
         #recordingTime {
+            font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
             font-size: 1.2em;
             font-weight: bold;
+            color: var(--primary-color);
+            background-color: #2D2D2D;
+            padding: 5px 10px;
+            border-radius: 6px;
+        }
+
+        .storage-info {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #2D2D2D;
+            border-radius: 6px;
+            font-size: 0.9em;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background-color: #2D2D2D;
+            border-radius: 2px;
+            margin-top: 10px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background-color: var(--primary-color);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
-    <h1>GitHub Screen Recorder</h1>
-    <div class="controls">
-        <button id="startBtn">Start Recording</button>
-        <button id="stopBtn" disabled>Stop Recording</button>
-        <span id="recordingTime">00:00</span>
+    <div class="container">
+        <h1>ScreenRec AI - Supabase Screen Recorder</h1>
+        <div class="controls">
+            <button id="startBtn">Start Recording</button>
+            <button id="stopBtn" disabled>Stop Recording</button>
+            <span id="recordingTime">00:00</span>
+        </div>
+        <div id="status" class="status">Ready to record</div>
+        <div id="progressBar" class="progress-bar">
+            <div id="progressBarFill" class="progress-bar-fill"></div>
+        </div>
+        <video id="preview" autoplay muted></video>
+        <div class="storage-info">
+            <p>Storage: Supabase Bucket (RecScreenAl)</p>
+            <p>Path format: <code>recordings/wowrakibul/2025-02-12/recording-{timestamp}.webm</code></p>
+        </div>
     </div>
-    <div id="status" class="status"></div>
-    <video id="preview" autoplay muted></video>
-    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
     <script src="recorder.js"></script>
 </body>
