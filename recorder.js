@@ -1,4 +1,4 @@
-class GitHubScreenRecorder {
+class SupabaseScreenRecorder {
     constructor() {
         this.mediaRecorder = null;
         this.recordedChunks = [];
@@ -6,12 +6,17 @@ class GitHubScreenRecorder {
         this.timerInterval = null;
         this.stream = null;
         
+        // Initialize Supabase client
+        this.supabase = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
+        
         // DOM elements
         this.startBtn = document.getElementById('startBtn');
         this.stopBtn = document.getElementById('stopBtn');
         this.preview = document.getElementById('preview');
         this.status = document.getElementById('status');
         this.recordingTime = document.getElementById('recordingTime');
+        this.progressBar = document.getElementById('progressBar');
+        this.progressBarFill = document.getElementById('progressBarFill');
         
         // Bind events
         this.startBtn.addEventListener('click', () => this.startRecording());
@@ -22,7 +27,8 @@ class GitHubScreenRecorder {
         try {
             this.stream = await navigator.mediaDevices.getDisplayMedia({
                 video: {
-                    cursor: "always"
+                    cursor: "always",
+                    frameRate: { ideal: 30 }
                 },
                 audio: {
                     echoCancellation: true,
@@ -52,11 +58,11 @@ class GitHubScreenRecorder {
 
             this.startBtn.disabled = true;
             this.stopBtn.disabled = false;
-            this.status.textContent = 'Recording...';
+            this.status.textContent = 'Recording in progress...';
             this.status.classList.add('recording');
         } catch (error) {
             console.error('Error starting recording:', error);
-            this.status.textContent = 'Error starting recording: ' + error.message;
+            this.status.textContent = 'Error: ' + error.message;
         }
     }
 
@@ -79,14 +85,16 @@ class GitHubScreenRecorder {
         });
 
         try {
-            await this.uploadToGitHub(blob);
+            const url = await this.uploadToSupabase(blob);
             this.status.textContent = 'Recording uploaded successfully!';
+            this.status.innerHTML += `<br><a href="${url}" target="_blank">View Recording</a>`;
         } catch (error) {
-            console.error('Error uploading to GitHub:', error);
-            this.status.textContent = 'Error uploading recording: ' + error.message;
+            console.error('Error uploading to Supabase:', error);
+            this.status.textContent = 'Error: ' + error.message;
         }
 
         this.recordedChunks = [];
+        this.progressBar.style.display = 'none';
     }
 
     updateTimer() {
@@ -97,43 +105,40 @@ class GitHubScreenRecorder {
             `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
 
-    async uploadToGitHub(blob) {
-        const reader = new FileReader();
-        reader.readAsDataURL(blob);
+    async uploadToSupabase(blob) {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filePath = `recordings/${CONFIG.USERNAME}/${CONFIG.CURRENT_DATE}/recording-${timestamp}.webm`;
         
-        return new Promise((resolve, reject) => {
-            reader.onloadend = async () => {
-                try {
-                    const base64Data = reader.result.split(',')[1];
-                    const username = 'wowrakibul'; // Using the provided username
-                    const date = new Date().toISOString().split('T')[0];
-                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-                    const fileName = `recordings/${username}/${date}/recording-${timestamp}.webm`;
+        this.progressBar.style.display = 'block';
+        this.progressBarFill.style.width = '0%';
 
-                    const response = await axios.put(
-                        `https://api.github.com/repos/${CONFIG.GITHUB_REPO}/contents/${fileName}`,
-                        {
-                            message: `Add screen recording ${timestamp}`,
-                            content: base64Data,
-                            branch: CONFIG.GITHUB_BRANCH
-                        },
-                        {
-                            headers: {
-                                'Authorization': `token ${CONFIG.GITHUB_TOKEN}`,
-                                'Content-Type': 'application/json',
-                            }
-                        }
-                    );
+        try {
+            // Upload the file
+            const { data, error } = await this.supabase.storage
+                .from(CONFIG.BUCKET_NAME)
+                .upload(filePath, blob, {
+                    cacheControl: '3600',
+                    upsert: false,
+                    onUploadProgress: (progress) => {
+                        const percentage = (progress.loaded / progress.total) * 100;
+                        this.progressBarFill.style.width = `${percentage}%`;
+                    }
+                });
 
-                    resolve(response.data);
-                } catch (error) {
-                    reject(error);
-                }
-            };
-            reader.onerror = reject;
-        });
+            if (error) throw error;
+
+            // Get the public URL
+            const { data: { publicUrl } } = this.supabase.storage
+                .from(CONFIG.BUCKET_NAME)
+                .getPublicUrl(filePath);
+
+            return publicUrl;
+        } catch (error) {
+            console.error('Supabase upload error:', error);
+            throw new Error('Failed to upload recording to Supabase');
+        }
     }
 }
 
 // Initialize the recorder
-const recorder = new GitHubScreenRecorder();
+const recorder = new SupabaseScreenRecorder();
